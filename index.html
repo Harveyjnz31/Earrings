@@ -162,8 +162,12 @@
   <div id="empty-state" class="empty" style="display:none;">Aún no has registrado pendientes.</div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const STORAGE_KEY = 'pendientes-imantek-lista';
+const SUPABASE_URL = 'https://kxpbmlfdxvtpfcxwjnbo.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ctGWAIhlS6Pbsh5m0ebg4A_VlrjUK9Q';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 let tasks = [];
 let editingTaskId = null;
 
@@ -194,31 +198,33 @@ function statusInfo(task){
   return {label:'A tiempo', cls:'ok'};
 }
 
+function rowToTask(row){
+  return {
+    id: row.id,
+    desc: row.descripcion,
+    resp: row.responsable || '',
+    fecha: row.fecha_limite,
+    prio: row.prioridad,
+    completada: row.completada
+  };
+}
+
 async function loadTasks(){
   try{
-    if(window.storage){
-      const res = await window.storage.get(STORAGE_KEY, false);
-      tasks = res ? JSON.parse(res.value) : [];
-    } else {
-      tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    }
+    const { data, error } = await sb
+      .from('pendientes')
+      .select('*')
+      .order('fecha_limite', { ascending: true });
+    if(error) throw error;
+    tasks = (data || []).map(rowToTask);
   }catch(e){
+    console.error(e);
     tasks = [];
   }
   render();
 }
 
-async function saveTasks(){
-  try{
-    if(window.storage){
-      await window.storage.set(STORAGE_KEY, JSON.stringify(tasks), false);
-    } else {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    }
-  }catch(e){}
-}
-
-function addTask(){
+async function addTask(){
   const desc = document.getElementById('f-desc').value.trim();
   const resp = capitalizeFirst(document.getElementById('f-resp').value.trim());
   const fecha = document.getElementById('f-fecha').value;
@@ -231,19 +237,26 @@ function addTask(){
   }
   err.style.display = 'none';
 
-  tasks.push({
-    id: Date.now().toString(36),
-    desc, resp, fecha, prio,
-    completada:false
-  });
+  try{
+    const { error } = await sb.from('pendientes').insert({
+      descripcion: desc,
+      responsable: resp,
+      fecha_limite: fecha,
+      prioridad: prio,
+      completada: false
+    });
+    if(error) throw error;
+  }catch(e){
+    console.error(e);
+    return;
+  }
 
   document.getElementById('f-desc').value = '';
   document.getElementById('f-resp').value = '';
   document.getElementById('f-fecha').value = '';
   document.getElementById('f-prio').value = 'media';
 
-  saveTasks();
-  render();
+  await loadTasks();
 }
 
 function startEdit(id){
@@ -256,10 +269,7 @@ function cancelEdit(){
   render();
 }
 
-function saveEdit(id){
-  const t = tasks.find(x => x.id === id);
-  if(!t) return;
-
+async function saveEdit(id){
   const desc = document.getElementById(`edit-desc-${id}`).value.trim();
   const resp = capitalizeFirst(document.getElementById(`edit-resp-${id}`).value.trim());
   const fecha = document.getElementById(`edit-fecha-${id}`).value;
@@ -267,33 +277,49 @@ function saveEdit(id){
 
   if(!desc || !fecha) return;
 
-  t.desc = desc;
-  t.resp = resp;
-  t.fecha = fecha;
-  t.prio = prio;
+  try{
+    const { error } = await sb.from('pendientes').update({
+      descripcion: desc,
+      responsable: resp,
+      fecha_limite: fecha,
+      prioridad: prio
+    }).eq('id', id);
+    if(error) throw error;
+  }catch(e){
+    console.error(e);
+    return;
+  }
+
   editingTaskId = null;
-  saveTasks();
-  render();
+  await loadTasks();
 }
 
-function toggleDone(id){
+async function toggleDone(id){
   const t = tasks.find(x => x.id === id);
-  if(t) t.completada = !t.completada;
-  saveTasks();
-  render();
+  if(!t) return;
+  try{
+    const { error } = await sb.from('pendientes')
+      .update({ completada: !t.completada }).eq('id', id);
+    if(error) throw error;
+  }catch(e){ console.error(e); return; }
+  await loadTasks();
 }
 
-function changePriority(id, val){
-  const t = tasks.find(x => x.id === id);
-  if(t) t.prio = val;
-  saveTasks();
-  render();
+async function changePriority(id, val){
+  try{
+    const { error } = await sb.from('pendientes')
+      .update({ prioridad: val }).eq('id', id);
+    if(error) throw error;
+  }catch(e){ console.error(e); return; }
+  await loadTasks();
 }
 
-function deleteTask(id){
-  tasks = tasks.filter(x => x.id !== id);
-  saveTasks();
-  render();
+async function deleteTask(id){
+  try{
+    const { error } = await sb.from('pendientes').delete().eq('id', id);
+    if(error) throw error;
+  }catch(e){ console.error(e); return; }
+  await loadTasks();
 }
 
 function sortTasks(list){
