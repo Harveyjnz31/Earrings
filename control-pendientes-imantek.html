@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Control de pendientes - IMANTEK</title>
+<style>
+  :root{
+    --bg:#f5f4f0; --card:#ffffff; --border:#e1dfd6; --border-strong:#c9c6ba;
+    --text:#26251f; --text-secondary:#6b6a61; --text-muted:#9a988c;
+    --teal:#0f6e56; --teal-bg:#e1f5ee; --teal-text:#085041;
+    --red:#a32d2d; --red-bg:#fcebeb; --red-text:#791f1f;
+    --amber:#854f0b; --amber-bg:#faeeda; --amber-text:#633806;
+    --gray-bg:#f1efe8; --gray-text:#444441;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg); color:var(--text); padding:24px;
+  }
+  .wrap{max-width:1000px;margin:0 auto;}
+  h1{font-size:20px;font-weight:600;margin:0 0 4px;}
+  .subtitle{color:var(--text-secondary);font-size:13px;margin:0 0 20px;}
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
+  .metric{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .metric .label{font-size:12px;color:var(--text-secondary);margin-bottom:4px;}
+  .metric .value{font-size:22px;font-weight:600;}
+  .metric.red .value{color:var(--red);}
+  .metric.amber .value{color:var(--amber);}
+  .metric.teal .value{color:var(--teal);}
+
+  .form-card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;}
+  .form-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end;}
+  .field label{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;}
+  .field input, .field select{
+    width:100%;height:36px;border:0.5px solid var(--border-strong);border-radius:6px;
+    padding:0 10px;font-size:14px;background:#fff;color:var(--text);
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--teal);outline-offset:-1px;}
+  button{
+    height:36px;border-radius:6px;border:0.5px solid var(--border-strong);background:#fff;
+    cursor:pointer;font-size:14px;padding:0 16px;color:var(--text);
+  }
+  button:hover{background:var(--gray-bg);}
+  button.primary{background:var(--teal);border-color:var(--teal);color:#fff;}
+  button.primary:hover{background:var(--teal-text);}
+  .err{color:var(--red);font-size:12px;margin-top:6px;display:none;}
+
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;border:0.5px solid var(--border);}
+  th{text-align:left;font-size:12px;color:var(--text-secondary);font-weight:500;padding:10px 12px;background:var(--gray-bg);border-bottom:0.5px solid var(--border);}
+  td{padding:10px 12px;font-size:14px;border-bottom:0.5px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr.overdue td{background:var(--red-bg);}
+  tr.done td{opacity:0.55;}
+  .desc{font-weight:500;}
+  .badge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:12px;font-weight:500;white-space:nowrap;}
+  .badge.alta{background:var(--red-bg);color:var(--red-text);}
+  .badge.media{background:var(--amber-bg);color:var(--amber-text);}
+  .badge.baja{background:var(--teal-bg);color:var(--teal-text);}
+  .badge.atrasado{background:var(--red);color:#fff;}
+  .badge.hoy{background:var(--amber-bg);color:var(--amber-text);}
+  .badge.proximo{background:var(--gray-bg);color:var(--gray-text);}
+  .badge.ok{background:var(--teal-bg);color:var(--teal-text);}
+  .badge.completada{background:var(--gray-bg);color:var(--gray-text);}
+  .row-actions{display:flex;gap:6px;}
+  .row-actions button{padding:0 10px;height:28px;font-size:12px;}
+  .empty{padding:32px;text-align:center;color:var(--text-muted);font-size:14px;}
+  select.priority-select{height:28px;font-size:12px;border-radius:6px;border:0.5px solid var(--border-strong);background:#fff;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Control de pendientes - IMANTEK</h1>
+  <p class="subtitle">Registra cada pendiente con su fecha límite. El sistema marca automáticamente los que están atrasados.</p>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="form-card">
+    <div class="form-grid">
+      <div class="field">
+        <label for="f-desc">Descripción del pendiente</label>
+        <input id="f-desc" type="text" placeholder="Ej: Cotizar repuestos para cliente X">
+      </div>
+      <div class="field">
+        <label for="f-resp">Responsable</label>
+        <input id="f-resp" type="text" placeholder="Ej: Harvey">
+      </div>
+      <div class="field">
+        <label for="f-fecha">Fecha límite</label>
+        <input id="f-fecha" type="date">
+      </div>
+      <div class="field">
+        <label for="f-prio">Prioridad</label>
+        <select id="f-prio">
+          <option value="alta">Alta</option>
+          <option value="media" selected>Media</option>
+          <option value="baja">Baja</option>
+        </select>
+      </div>
+      <button class="primary" id="btn-add">Agregar</button>
+    </div>
+    <div class="err" id="form-err">Escribe una descripción y una fecha límite.</div>
+  </div>
+
+  <table id="task-table">
+    <thead>
+      <tr>
+        <th>Pendiente</th>
+        <th>Responsable</th>
+        <th>Fecha límite</th>
+        <th>Prioridad</th>
+        <th>Estado</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="task-body"></tbody>
+  </table>
+  <div id="empty-state" class="empty" style="display:none;">Aún no has registrado pendientes.</div>
+</div>
+
+<script>
+const STORAGE_KEY = 'pendientes-imantek-lista';
+let tasks = [];
+
+function todayStr(){
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  return d.toISOString().slice(0,10);
+}
+
+function daysBetween(dateStr){
+  const today = new Date(todayStr());
+  const target = new Date(dateStr);
+  return Math.round((target - today) / 86400000);
+}
+
+function statusInfo(task){
+  if(task.completada) return {label:'Completada', cls:'completada'};
+  const diff = daysBetween(task.fecha);
+  if(diff < 0) return {label:`Atrasado (${Math.abs(diff)} día${Math.abs(diff)===1?'':'s'})`, cls:'atrasado'};
+  if(diff === 0) return {label:'Vence hoy', cls:'hoy'};
+  if(diff <= 2) return {label:`En ${diff} día${diff===1?'':'s'}`, cls:'proximo'};
+  return {label:'A tiempo', cls:'ok'};
+}
+
+async function loadTasks(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    tasks = res ? JSON.parse(res.value) : [];
+  }catch(e){
+    tasks = [];
+  }
+  render();
+}
+
+async function saveTasks(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(tasks), false);
+  }catch(e){}
+}
+
+function addTask(){
+  const desc = document.getElementById('f-desc').value.trim();
+  const resp = document.getElementById('f-resp').value.trim();
+  const fecha = document.getElementById('f-fecha').value;
+  const prio = document.getElementById('f-prio').value;
+  const err = document.getElementById('form-err');
+
+  if(!desc || !fecha){
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+
+  tasks.push({
+    id: Date.now().toString(36),
+    desc, resp, fecha, prio,
+    completada:false
+  });
+
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-resp').value = '';
+  document.getElementById('f-fecha').value = '';
+  document.getElementById('f-prio').value = 'media';
+
+  saveTasks();
+  render();
+}
+
+function toggleDone(id){
+  const t = tasks.find(x => x.id === id);
+  if(t) t.completada = !t.completada;
+  saveTasks();
+  render();
+}
+
+function changePriority(id, val){
+  const t = tasks.find(x => x.id === id);
+  if(t) t.prio = val;
+  saveTasks();
+  render();
+}
+
+function deleteTask(id){
+  tasks = tasks.filter(x => x.id !== id);
+  saveTasks();
+  render();
+}
+
+function sortTasks(list){
+  const rank = t => {
+    if(t.completada) return 3;
+    const diff = daysBetween(t.fecha);
+    if(diff < 0) return 0;
+    if(diff <= 2) return 1;
+    return 2;
+  };
+  return [...list].sort((a,b) => {
+    const r = rank(a) - rank(b);
+    if(r !== 0) return r;
+    return new Date(a.fecha) - new Date(b.fecha);
+  });
+}
+
+function render(){
+  const body = document.getElementById('task-body');
+  const empty = document.getElementById('empty-state');
+  const table = document.getElementById('task-table');
+  body.innerHTML = '';
+
+  if(tasks.length === 0){
+    table.style.display = 'none';
+    empty.style.display = 'block';
+  } else {
+    table.style.display = '';
+    empty.style.display = 'none';
+  }
+
+  const sorted = sortTasks(tasks);
+  for(const t of sorted){
+    const st = statusInfo(t);
+    const tr = document.createElement('tr');
+    if(!t.completada && st.cls === 'atrasado') tr.className = 'overdue';
+    if(t.completada) tr.className = 'done';
+
+    const fechaFmt = new Date(t.fecha + 'T00:00:00').toLocaleDateString('es-CO', {day:'numeric', month:'short', year:'numeric'});
+
+    tr.innerHTML = `
+      <td class="desc">${escapeHtml(t.desc)}</td>
+      <td>${escapeHtml(t.resp) || '<span style="color:var(--text-muted)">-</span>'}</td>
+      <td>${fechaFmt}</td>
+      <td>
+        <select class="priority-select" data-id="${t.id}" onchange="changePriority('${t.id}', this.value)">
+          <option value="alta" ${t.prio==='alta'?'selected':''}>Alta</option>
+          <option value="media" ${t.prio==='media'?'selected':''}>Media</option>
+          <option value="baja" ${t.prio==='baja'?'selected':''}>Baja</option>
+        </select>
+      </td>
+      <td><span class="badge ${st.cls}">${st.label}</span></td>
+      <td>
+        <div class="row-actions">
+          <button onclick="toggleDone('${t.id}')">${t.completada ? 'Reabrir' : 'Completar'}</button>
+          <button onclick="deleteTask('${t.id}')">Eliminar</button>
+        </div>
+      </td>
+    `;
+    body.appendChild(tr);
+  }
+
+  renderSummary();
+}
+
+function renderSummary(){
+  const total = tasks.length;
+  const activos = tasks.filter(t => !t.completada);
+  const atrasadas = activos.filter(t => daysBetween(t.fecha) < 0).length;
+  const proximas = activos.filter(t => { const d = daysBetween(t.fecha); return d >= 0 && d <= 2; }).length;
+  const completadas = tasks.filter(t => t.completada).length;
+
+  const summary = document.getElementById('summary');
+  summary.innerHTML = `
+    <div class="metric"><div class="label">Total pendientes</div><div class="value">${total}</div></div>
+    <div class="metric red"><div class="label">Atrasados</div><div class="value">${atrasadas}</div></div>
+    <div class="metric amber"><div class="label">Vencen pronto (≤2 días)</div><div class="value">${proximas}</div></div>
+    <div class="metric teal"><div class="label">Completados</div><div class="value">${completadas}</div></div>
+  `;
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+document.getElementById('btn-add').addEventListener('click', addTask);
+document.getElementById('f-desc').addEventListener('keydown', e => { if(e.key === 'Enter') addTask(); });
+
+loadTasks();
+</script>
+</body>
+</html>
