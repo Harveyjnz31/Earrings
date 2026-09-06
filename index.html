@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <title>IMANTEK | Control de pendientes</title>
 <style>
   :root{
@@ -76,6 +77,11 @@
   .row-actions button{padding:0 10px;height:28px;font-size:12px;}
   .empty{padding:32px;text-align:center;color:var(--text-muted);font-size:14px;}
   select.priority-select{height:28px;font-size:12px;border-radius:6px;border:0.5px solid var(--border-strong);background:#fff;}
+  .edit-input,.edit-select{
+    width:100%;height:32px;border:0.5px solid var(--border-strong);border-radius:6px;
+    padding:0 8px;font-size:13px;background:#fff;color:var(--text);
+  }
+  .edit-input:focus,.edit-select:focus{outline:2px solid var(--teal);outline-offset:-1px;}
   @media (max-width:760px){
     body{padding:14px;}
     .app-header{align-items:flex-start;padding:16px;gap:14px;}
@@ -147,7 +153,7 @@
           <th>Fecha límite</th>
           <th>Prioridad</th>
           <th>Estado</th>
-          <th></th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody id="task-body"></tbody>
@@ -159,6 +165,7 @@
 <script>
 const STORAGE_KEY = 'pendientes-imantek-lista';
 let tasks = [];
+let editingTaskId = null;
 
 function todayStr(){
   const d = new Date();
@@ -170,6 +177,12 @@ function daysBetween(dateStr){
   const today = new Date(todayStr());
   const target = new Date(dateStr);
   return Math.round((target - today) / 86400000);
+}
+
+function capitalizeFirst(value){
+  return (value || '').replace(/^(\s*)([a-záéíóúüñ])/i, (match, spaces, first) => {
+    return spaces + first.toLocaleUpperCase('es-CO');
+  });
 }
 
 function statusInfo(task){
@@ -207,7 +220,7 @@ async function saveTasks(){
 
 function addTask(){
   const desc = document.getElementById('f-desc').value.trim();
-  const resp = document.getElementById('f-resp').value.trim();
+  const resp = capitalizeFirst(document.getElementById('f-resp').value.trim());
   const fecha = document.getElementById('f-fecha').value;
   const prio = document.getElementById('f-prio').value;
   const err = document.getElementById('form-err');
@@ -229,6 +242,36 @@ function addTask(){
   document.getElementById('f-fecha').value = '';
   document.getElementById('f-prio').value = 'media';
 
+  saveTasks();
+  render();
+}
+
+function startEdit(id){
+  editingTaskId = id;
+  render();
+}
+
+function cancelEdit(){
+  editingTaskId = null;
+  render();
+}
+
+function saveEdit(id){
+  const t = tasks.find(x => x.id === id);
+  if(!t) return;
+
+  const desc = document.getElementById(`edit-desc-${id}`).value.trim();
+  const resp = capitalizeFirst(document.getElementById(`edit-resp-${id}`).value.trim());
+  const fecha = document.getElementById(`edit-fecha-${id}`).value;
+  const prio = document.getElementById(`edit-prio-${id}`).value;
+
+  if(!desc || !fecha) return;
+
+  t.desc = desc;
+  t.resp = resp;
+  t.fecha = fecha;
+  t.prio = prio;
+  editingTaskId = null;
   saveTasks();
   render();
 }
@@ -292,25 +335,48 @@ function render(){
 
     const fechaFmt = new Date(t.fecha + 'T00:00:00').toLocaleDateString('es-CO', {day:'numeric', month:'short', year:'numeric'});
 
-    tr.innerHTML = `
-      <td class="desc">${escapeHtml(t.desc)}</td>
-      <td>${escapeHtml(t.resp) || '<span style="color:var(--text-muted)">-</span>'}</td>
-      <td>${fechaFmt}</td>
-      <td>
-        <select class="priority-select" data-id="${t.id}" onchange="changePriority('${t.id}', this.value)">
-          <option value="alta" ${t.prio==='alta'?'selected':''}>Alta</option>
-          <option value="media" ${t.prio==='media'?'selected':''}>Media</option>
-          <option value="baja" ${t.prio==='baja'?'selected':''}>Baja</option>
-        </select>
-      </td>
-      <td><span class="badge ${st.cls}">${st.label}</span></td>
-      <td>
-        <div class="row-actions">
-          <button onclick="toggleDone('${t.id}')">${t.completada ? 'Reabrir' : 'Completar'}</button>
-          <button onclick="deleteTask('${t.id}')">Eliminar</button>
-        </div>
-      </td>
-    `;
+    if(t.id === editingTaskId){
+      tr.innerHTML = `
+        <td><input class="edit-input" id="edit-desc-${t.id}" type="text" value="${escapeAttr(t.desc)}"></td>
+        <td><input class="edit-input" id="edit-resp-${t.id}" type="text" value="${escapeAttr(t.resp)}" oninput="this.value = capitalizeFirst(this.value)"></td>
+        <td><input class="edit-input" id="edit-fecha-${t.id}" type="date" value="${escapeAttr(t.fecha)}"></td>
+        <td>
+          <select class="edit-select" id="edit-prio-${t.id}">
+            <option value="alta" ${t.prio==='alta'?'selected':''}>Alta</option>
+            <option value="media" ${t.prio==='media'?'selected':''}>Media</option>
+            <option value="baja" ${t.prio==='baja'?'selected':''}>Baja</option>
+          </select>
+        </td>
+        <td><span class="badge ${st.cls}">${st.label}</span></td>
+        <td>
+          <div class="row-actions">
+            <button onclick="saveEdit('${t.id}')">Guardar</button>
+            <button onclick="cancelEdit()">Cancelar</button>
+          </div>
+        </td>
+      `;
+    } else {
+      tr.innerHTML = `
+        <td class="desc">${escapeHtml(t.desc)}</td>
+        <td>${escapeHtml(t.resp) || '<span style="color:var(--text-muted)">-</span>'}</td>
+        <td>${fechaFmt}</td>
+        <td>
+          <select class="priority-select" data-id="${t.id}" onchange="changePriority('${t.id}', this.value)">
+            <option value="alta" ${t.prio==='alta'?'selected':''}>Alta</option>
+            <option value="media" ${t.prio==='media'?'selected':''}>Media</option>
+            <option value="baja" ${t.prio==='baja'?'selected':''}>Baja</option>
+          </select>
+        </td>
+        <td><span class="badge ${st.cls}">${st.label}</span></td>
+        <td>
+          <div class="row-actions">
+            <button onclick="startEdit('${t.id}')">Editar</button>
+            <button onclick="toggleDone('${t.id}')">${t.completada ? 'Reabrir' : 'Completar'}</button>
+            <button onclick="deleteTask('${t.id}')">Eliminar</button>
+          </div>
+        </td>
+      `;
+    }
     body.appendChild(tr);
   }
 
@@ -339,8 +405,15 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
+function escapeAttr(str){
+  return escapeHtml(str).replace(/"/g, '&quot;');
+}
+
 document.getElementById('btn-add').addEventListener('click', addTask);
 document.getElementById('f-desc').addEventListener('keydown', e => { if(e.key === 'Enter') addTask(); });
+document.getElementById('f-resp').addEventListener('input', e => {
+  e.target.value = capitalizeFirst(e.target.value);
+});
 
 loadTasks();
 </script>
