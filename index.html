@@ -2,15 +2,17 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Control de pendientes - IMANTEK</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMANTEK | Control de pendientes</title>
 <style>
   :root{
-    --bg:#f5f4f0; --card:#ffffff; --border:#e1dfd6; --border-strong:#c9c6ba;
-    --text:#26251f; --text-secondary:#6b6a61; --text-muted:#9a988c;
-    --teal:#0f6e56; --teal-bg:#e1f5ee; --teal-text:#085041;
+    --bg:#f6f8fa; --card:#ffffff; --border:#dfe5eb; --border-strong:#b9c4cf;
+    --text:#17202a; --text-secondary:#5d6874; --text-muted:#8a96a3;
+    --brand-dark:#111827; --brand-blue:#00bde8;
+    --teal:#0b6f7f; --teal-bg:#def7fb; --teal-text:#064e5a;
     --red:#a32d2d; --red-bg:#fcebeb; --red-text:#791f1f;
     --amber:#854f0b; --amber-bg:#faeeda; --amber-text:#633806;
-    --gray-bg:#f1efe8; --gray-text:#444441;
+    --gray-bg:#eef2f5; --gray-text:#3d4650;
     --radius:8px;
   }
   *{box-sizing:border-box;}
@@ -19,17 +21,24 @@
     background:var(--bg); color:var(--text); padding:24px;
   }
   .wrap{max-width:1000px;margin:0 auto;}
-  h1{font-size:20px;font-weight:600;margin:0 0 4px;}
-  .subtitle{color:var(--text-secondary);font-size:13px;margin:0 0 20px;}
+  .app-header{
+    display:flex;align-items:center;justify-content:space-between;gap:18px;
+    margin-bottom:22px;padding:18px 20px;background:var(--card);
+    border:0.5px solid var(--border);border-radius:12px;
+  }
+  .brand{display:flex;align-items:center;gap:16px;min-width:0;}
+  .brand-logo{width:168px;height:auto;display:block;flex:0 0 auto;}
+  h1{font-size:24px;line-height:1.15;font-weight:700;margin:0 0 5px;color:var(--brand-dark);}
+  .subtitle{color:var(--text-secondary);font-size:13px;margin:0;}
   .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
-  .metric{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .metric{background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:12px 14px;}
   .metric .label{font-size:12px;color:var(--text-secondary);margin-bottom:4px;}
   .metric .value{font-size:22px;font-weight:600;}
   .metric.red .value{color:var(--red);}
   .metric.amber .value{color:var(--amber);}
   .metric.teal .value{color:var(--teal);}
 
-  .form-card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;}
+  .form-card{background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;}
   .form-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end;}
   .field label{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;}
   .field input, .field select{
@@ -46,7 +55,8 @@
   button.primary:hover{background:var(--teal-text);}
   .err{color:var(--red);font-size:12px;margin-top:6px;display:none;}
 
-  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;border:0.5px solid var(--border);}
+  .table-wrap{width:100%;overflow-x:auto;border-radius:8px;border:0.5px solid var(--border);background:var(--card);}
+  table{width:100%;min-width:760px;border-collapse:collapse;background:var(--card);}
   th{text-align:left;font-size:12px;color:var(--text-secondary);font-weight:500;padding:10px 12px;background:var(--gray-bg);border-bottom:0.5px solid var(--border);}
   td{padding:10px 12px;font-size:14px;border-bottom:0.5px solid var(--border);vertical-align:middle;}
   tr:last-child td{border-bottom:none;}
@@ -66,12 +76,39 @@
   .row-actions button{padding:0 10px;height:28px;font-size:12px;}
   .empty{padding:32px;text-align:center;color:var(--text-muted);font-size:14px;}
   select.priority-select{height:28px;font-size:12px;border-radius:6px;border:0.5px solid var(--border-strong);background:#fff;}
+  @media (max-width:760px){
+    body{padding:14px;}
+    .app-header{align-items:flex-start;padding:16px;gap:14px;}
+    .brand{align-items:flex-start;flex-direction:column;gap:10px;}
+    .brand-logo{width:148px;}
+    h1{font-size:22px;}
+    .form-grid{grid-template-columns:1fr;}
+    button,.field input,.field select{height:40px;}
+    button.primary{width:100%;}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Control de pendientes - IMANTEK</h1>
-  <p class="subtitle">Registra cada pendiente con su fecha límite. El sistema marca automáticamente los que están atrasados.</p>
+  <header class="app-header">
+    <div class="brand">
+      <svg class="brand-logo" viewBox="0 0 330 62" role="img" aria-label="IMANTEK">
+        <defs>
+          <linearGradient id="brandSheen" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0" stop-color="#101827"/>
+            <stop offset="0.56" stop-color="#243047"/>
+            <stop offset="1" stop-color="#070b12"/>
+          </linearGradient>
+        </defs>
+        <text x="0" y="45" font-family="Arial Black, Impact, sans-serif" font-size="50" font-weight="900" letter-spacing="0" fill="url(#brandSheen)">IMAN</text>
+        <text x="185" y="45" font-family="Arial Black, Impact, sans-serif" font-size="50" font-weight="900" letter-spacing="0" fill="#00bde8">TEK</text>
+      </svg>
+      <div>
+        <h1>Control de Pendientes</h1>
+        <p class="subtitle">Seguimiento de tareas, responsables y fechas límite de IMANTEK.</p>
+      </div>
+    </div>
+  </header>
 
   <div class="summary" id="summary"></div>
 
@@ -102,19 +139,21 @@
     <div class="err" id="form-err">Escribe una descripción y una fecha límite.</div>
   </div>
 
-  <table id="task-table">
-    <thead>
-      <tr>
-        <th>Pendiente</th>
-        <th>Responsable</th>
-        <th>Fecha límite</th>
-        <th>Prioridad</th>
-        <th>Estado</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="task-body"></tbody>
-  </table>
+  <div class="table-wrap" id="task-table-wrap">
+    <table id="task-table">
+      <thead>
+        <tr>
+          <th>Pendiente</th>
+          <th>Responsable</th>
+          <th>Fecha límite</th>
+          <th>Prioridad</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="task-body"></tbody>
+    </table>
+  </div>
   <div id="empty-state" class="empty" style="display:none;">Aún no has registrado pendientes.</div>
 </div>
 
@@ -145,8 +184,12 @@ function statusInfo(task){
 
 async function loadTasks(){
   try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    tasks = res ? JSON.parse(res.value) : [];
+    if(window.storage){
+      const res = await window.storage.get(STORAGE_KEY, false);
+      tasks = res ? JSON.parse(res.value) : [];
+    } else {
+      tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    }
   }catch(e){
     tasks = [];
   }
@@ -155,7 +198,11 @@ async function loadTasks(){
 
 async function saveTasks(){
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(tasks), false);
+    if(window.storage){
+      await window.storage.set(STORAGE_KEY, JSON.stringify(tasks), false);
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
   }catch(e){}
 }
 
@@ -226,13 +273,14 @@ function render(){
   const body = document.getElementById('task-body');
   const empty = document.getElementById('empty-state');
   const table = document.getElementById('task-table');
+  const tableWrap = document.getElementById('task-table-wrap');
   body.innerHTML = '';
 
   if(tasks.length === 0){
-    table.style.display = 'none';
+    tableWrap.style.display = 'none';
     empty.style.display = 'block';
   } else {
-    table.style.display = '';
+    tableWrap.style.display = '';
     empty.style.display = 'none';
   }
 
